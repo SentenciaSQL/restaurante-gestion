@@ -3,8 +3,8 @@ spring:
     name: restosuite
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/restosuite}
-    username: ${DB_USER:restosuite}
-    password: ${DB_PASSWORD:restosuite}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     open-in-view: false
     hibernate:
