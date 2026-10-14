@@ -1,0 +1,47 @@
+name: fogon
+
+services:
+  db:
+    image: postgres:16.15-bookworm
+    environment:
+      POSTGRES_DB: restosuite
+      POSTGRES_USER: restosuite
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-restosuite}
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restosuite -d restosuite"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DB_URL: jdbc:postgresql://db:5432/restosuite
+      DB_USER: restosuite
+      DB_PASSWORD: ${DB_PASSWORD:-restosuite}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-please-use-32-characters}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-720}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8088}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@restosuite.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:8088:8080"
+
+volumes:
+  pgdata:

@@ -1,0 +1,104 @@
+<section class="space-y-6">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="text-sm text-base-content/70">Operación</p>
+      <h1 class="font-display text-3xl">Tablero</h1>
+    </div>
+    <form class="flex flex-wrap items-end gap-2" [formGroup]="form" (ngSubmit)="load()">
+      <label class="form-control">
+        <span class="label-text">Período</span>
+        <select class="select select-bordered" formControlName="preset" aria-label="Período">
+          <option value="today">Hoy</option>
+          <option value="week">Semana</option>
+          <option value="month">Mes</option>
+          <option value="quarter">Trimestre</option>
+          <option value="year">Año</option>
+          <option value="custom">Personalizado</option>
+        </select>
+      </label>
+      <label class="form-control">
+        <span class="label-text">Desde</span>
+        <input class="input input-bordered" type="date" formControlName="from" />
+      </label>
+      <label class="form-control">
+        <span class="label-text">Hasta</span>
+        <input class="input input-bordered" type="date" formControlName="to" />
+      </label>
+      <button class="btn btn-primary" type="submit">Actualizar</button>
+    </form>
+  </header>
+  @if (loading()) {
+    <span class="loading loading-spinner loading-lg" role="status" aria-label="Cargando indicadores"></span>
+  } @else if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  } @else if (data(); as row) {
+    <p class="text-sm text-base-content/70">Las ventas del día y del mes son cuentas cerradas con impuesto. La ganancia corresponde al período filtrado y no incluye el ITBIS.</p>
+    <div class="stats stats-vertical w-full bg-base-100 shadow-sm md:stats-horizontal">
+      <div class="stat"><div class="stat-title">Ventas de hoy</div><div class="stat-value tabular text-2xl">{{ format.money(row.salesToday) }}</div></div>
+      <div class="stat"><div class="stat-title">Ventas del mes</div><div class="stat-value tabular text-2xl">{{ format.money(row.salesMonth) }}</div></div>
+      <div class="stat"><div class="stat-title">Cuentas cerradas</div><div class="stat-value tabular text-2xl">{{ row.orders }}</div></div>
+      <div class="stat"><div class="stat-title">Ticket promedio</div><div class="stat-value tabular text-2xl">{{ format.money(row.averageTicket) }}</div></div>
+    </div>
+    <div class="grid gap-4 lg:grid-cols-4">
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Mesas</h2>
+        <p>Disponibles: <span class="tabular">{{ row.tables['available'] }}</span></p>
+        <p>Ocupadas: <span class="tabular">{{ row.tables['occupied'] }}</span></p>
+        <p>Reservadas: <span class="tabular">{{ row.tables['reserved'] }}</span></p>
+        <p>Limpieza: <span class="tabular">{{ row.tables['cleaning'] }}</span></p>
+      </div></article>
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Cocina</h2>
+        <p class="tabular text-3xl">{{ row.pendingKitchen }}</p>
+        <p class="text-sm text-base-content/70">Comandas pendientes de entrega</p>
+      </div></article>
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Resultado del período</h2>
+        <p>Gastos: <span class="tabular">{{ format.money(row.expenses) }}</span></p>
+        <p>Ganancia bruta: <span class="tabular">{{ format.money(row.grossProfit) }}</span></p>
+        <p>Resultado neto: <span class="tabular">{{ format.money(row.netResult) }}</span></p>
+        <p class="text-sm text-base-content/70">Cobros del período: {{ format.money(row.collections) }}. No son ingresos contables.</p>
+      </div></article>
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Existencias bajas</h2>
+        @if (!row.lowStock.length) { <p>Ningún ingrediente está en el mínimo o por debajo.</p> }
+        <ul class="max-h-40 space-y-1 overflow-auto text-sm">
+          @for (item of row.lowStock; track item.name) { <li class="flex justify-between gap-2"><span>{{ item.name }}</span><span class="tabular">{{ format.qty(item.amount) }}</span></li> }
+        </ul>
+      </div></article>
+    </div>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Ventas por día</h2>
+        @if (!row.salesByDay.length) { <p>Aún no hay cuentas cerradas en este período.</p> }
+        <canvas #sales aria-label="Gráfico de ventas por día"></canvas>
+      </div></article>
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Métodos de pago</h2>
+        @if (!row.paymentMethods.length) { <p>No hay cobros registrados en el período.</p> }
+        <canvas #pays aria-label="Gráfico de métodos de pago"></canvas>
+      </div></article>
+    </div>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Productos más vendidos</h2>
+        @if (!row.topProducts.length) { <p>Sin ventas netas en el período.</p> }
+        <div class="overflow-x-auto"><table class="table">
+          <thead><tr><th>Producto</th><th class="text-right">Venta neta</th></tr></thead>
+          <tbody>
+            @for (item of row.topProducts; track item.name) { <tr><td>{{ item.name }}</td><td class="text-right tabular">{{ format.money(item.amount) }}</td></tr> }
+          </tbody>
+        </table></div>
+      </div></article>
+      <article class="card bg-base-100 shadow-sm"><div class="card-body">
+        <h2 class="card-title text-base">Actividad reciente</h2>
+        @if (!row.recent.length) { <p>Todavía no hay movimientos auditados.</p> }
+        <ul class="space-y-2 text-sm">
+          @for (item of row.recent; track item.at + item.action) {
+            <li><span class="font-medium">{{ item.action }}</span> · {{ item.details || item.entity }} <span class="text-base-content/60">{{ format.when(item.at) }}</span></li>
+          }
+        </ul>
+      </div></article>
+    </div>
+  }
+</section>

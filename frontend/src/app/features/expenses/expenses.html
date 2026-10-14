@@ -1,0 +1,38 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div><p class="text-sm text-base-content/70">Finanzas</p><h1 class="font-display text-3xl">Gastos</h1></div>
+    <label class="form-control"><span class="label-text">Estado</span>
+      <select class="select select-bordered" [value]="status()" (change)="status.set($any($event.target).value); reload()">
+        <option value="">Todos</option><option value="PENDING">Pendientes</option><option value="PAID">Pagados</option><option value="VOID">Anulados</option>
+      </select>
+    </label>
+  </header>
+  <p class="text-sm text-base-content/70">Un gasto pagado no se vuelve a contabilizar. Las compras de inventario se pagan en Compras y no se registran aquí.</p>
+  @if (session.can('expenses.manage')) {
+    <form class="card bg-base-100 shadow-sm" [formGroup]="form" (ngSubmit)="save()"><div class="card-body grid gap-2 md:grid-cols-3">
+      <label class="form-control"><span class="label-text">Categoría</span><select class="select select-bordered" formControlName="categoryId"><option [ngValue]="null">Seleccione</option>@for (row of categories(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select></label>
+      <label class="form-control"><span class="label-text">Proveedor</span><select class="select select-bordered" formControlName="supplierId"><option [ngValue]="null">Opcional</option>@for (row of suppliers(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select></label>
+      <label class="form-control"><span class="label-text">Fecha</span><input class="input input-bordered" type="date" formControlName="expenseDate" /></label>
+      <label class="form-control md:col-span-2"><span class="label-text">Descripción</span><input class="input input-bordered" formControlName="description" /></label>
+      <label class="form-control"><span class="label-text">Importe</span><input class="input input-bordered" type="number" min="0.01" step="0.01" formControlName="amount" /></label>
+      <label class="form-control"><span class="label-text">Método</span><select class="select select-bordered" formControlName="paymentMethodId"><option [ngValue]="null">Al pagar</option>@for (row of methods(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select></label>
+      <label class="form-control"><span class="label-text">Comprobante</span><input class="input input-bordered" formControlName="receiptRef" /></label>
+      <label class="flex items-center gap-2"><input type="checkbox" class="checkbox" formControlName="payNow" /> Pagar ahora</label>
+      <button class="btn btn-primary w-fit" type="submit" [disabled]="form.invalid">Registrar gasto</button>
+    </div></form>
+  }
+  @if (!rows().length) { <div class="alert">No hay gastos con ese filtro.</div> }
+  <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table"><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Estado</th><th class="text-right">Importe</th><th></th></tr></thead>
+    <tbody>@for (row of rows(); track row.id) {
+      <tr>
+        <td>{{ row.expenseDate }}</td><td>{{ row.description }}</td><td>{{ categoryName(row.categoryId) }}</td><td>{{ label(states, row.status) }}</td><td class="text-right tabular">{{ format.money(row.amount) }}</td>
+        <td class="flex gap-1">
+          @if (row.status === 'PENDING' && session.can('expenses.pay')) {
+            <select class="select select-bordered select-xs" aria-label="Pagar gasto" (change)="pay(row, $any($event.target).value)"><option value="">Pagar…</option>@for (method of methods(); track method.id) { <option [value]="method.id">{{ method.name }}</option> }</select>
+          }
+          @if (row.status !== 'VOID' && session.can('expenses.manage')) { <button type="button" class="btn btn-ghost btn-xs" (click)="voidExpense(row)">Anular</button> }
+        </td>
+      </tr>
+    }</tbody>
+  </table></div>
+</section>

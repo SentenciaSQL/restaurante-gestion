@@ -1,0 +1,58 @@
+<section class="space-y-6">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div><p class="text-sm text-base-content/70">Almacén</p><h1 class="font-display text-3xl">Inventario</h1></div>
+    <p class="text-sm">Valoración a costo promedio: <span class="tabular font-semibold">{{ format.money(valuation()) }}</span></p>
+  </header>
+  @if (!session.branchId()) { <div class="alert">Seleccione una sucursal.</div> }
+  @else {
+    @if (session.can('inventory.manage')) {
+      <form class="card bg-base-100 shadow-sm" [formGroup]="itemForm" (ngSubmit)="saveItem()"><div class="card-body grid gap-2 md:grid-cols-4">
+        <h2 class="card-title text-base md:col-span-4">Ingrediente</h2>
+        <input class="input input-bordered" formControlName="sku" placeholder="SKU" aria-label="SKU" />
+        <input class="input input-bordered" formControlName="name" placeholder="Nombre" aria-label="Nombre" />
+        <select class="select select-bordered" formControlName="unitId" aria-label="Unidad"><option [ngValue]="null">Unidad</option>@for (unit of units(); track unit.id) { <option [ngValue]="unit.id">{{ unit.name }}</option> }</select>
+        <input class="input input-bordered" type="number" min="0" step="0.001" formControlName="minStock" aria-label="Existencia mínima" />
+        <button class="btn btn-primary btn-sm w-fit" type="submit" [disabled]="itemForm.invalid">Guardar</button>
+      </div></form>
+    }
+    @if (session.can('inventory.adjust')) {
+      <div class="grid gap-4 lg:grid-cols-2">
+        <form class="card bg-base-100 shadow-sm" [formGroup]="moveForm" (ngSubmit)="move()"><div class="card-body gap-2">
+          <h2 class="card-title text-base">Entrada, salida, ajuste o merma</h2>
+          <select class="select select-bordered" formControlName="warehouseId" aria-label="Almacén"><option [ngValue]="null">Almacén</option>@for (row of warehouses(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+          <select class="select select-bordered" formControlName="ingredientId" aria-label="Ingrediente"><option [ngValue]="null">Ingrediente</option>@for (row of ingredients(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+          <select class="select select-bordered" formControlName="type" aria-label="Tipo"><option value="ADJUSTMENT">Ajuste</option><option value="WASTE">Merma</option><option value="SUPPLIER_RETURN">Devolución a proveedor</option></select>
+          <select class="select select-bordered" formControlName="direction" aria-label="Dirección"><option value="IN">Entrada</option><option value="OUT">Salida</option></select>
+          <input class="input input-bordered" type="number" min="0.001" step="0.001" formControlName="quantity" aria-label="Cantidad" />
+          <input class="input input-bordered" type="number" min="0" step="0.0001" formControlName="unitCost" aria-label="Costo unitario" />
+          <input class="input input-bordered" formControlName="reason" placeholder="Motivo" aria-label="Motivo" />
+          <button class="btn btn-primary btn-sm w-fit" type="submit" [disabled]="moveForm.invalid">Registrar movimiento</button>
+        </div></form>
+        <form class="card bg-base-100 shadow-sm" [formGroup]="transferForm" (ngSubmit)="transfer()"><div class="card-body gap-2">
+          <h2 class="card-title text-base">Transferencia entre almacenes</h2>
+          <select class="select select-bordered" formControlName="sourceWarehouseId" aria-label="Origen"><option [ngValue]="null">Origen</option>@for (row of warehouses(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+          <select class="select select-bordered" formControlName="targetWarehouseId" aria-label="Destino"><option [ngValue]="null">Destino</option>@for (row of warehouses(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+          <select class="select select-bordered" formControlName="ingredientId" aria-label="Ingrediente a transferir"><option [ngValue]="null">Ingrediente</option>@for (row of ingredients(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+          <input class="input input-bordered" type="number" min="0.001" step="0.001" formControlName="quantity" aria-label="Cantidad a transferir" />
+          <input class="input input-bordered" formControlName="reason" placeholder="Motivo" aria-label="Motivo de la transferencia" />
+          <button class="btn btn-sm w-fit" type="submit" [disabled]="transferForm.invalid">Transferir</button>
+        </div></form>
+      </div>
+    }
+    <input class="input input-bordered max-w-xs" placeholder="Buscar ingrediente" [value]="query()" (input)="query.set($any($event.target).value)" aria-label="Buscar ingrediente" />
+    <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table">
+      <thead><tr><th>Ingrediente</th><th class="text-right">Existencia</th><th class="text-right">Mínimo</th><th class="text-right">Costo promedio</th></tr></thead>
+      <tbody>
+        @for (row of visible(); track row.id) {
+          <tr [class.text-error]="qtyOf(row.id!) <= row.minStock"><td>{{ row.name }}</td><td class="text-right tabular">{{ format.qty(qtyOf(row.id!)) }}</td><td class="text-right tabular">{{ format.qty(row.minStock) }}</td><td class="text-right tabular">{{ format.money(costOf(row.id!)) }}</td></tr>
+        }
+      </tbody>
+    </table></div>
+    <h2 class="text-lg font-semibold">Movimientos recientes</h2>
+    @if (!movements().length) { <p>Todavía no hay movimientos en esta sucursal.</p> }
+    <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table table-sm">
+      <thead><tr><th>Fecha</th><th>Ingrediente</th><th>Tipo</th><th>Dirección</th><th class="text-right">Cantidad</th><th>Motivo</th></tr></thead>
+      <tbody>@for (row of movements(); track row.id) { <tr><td>{{ format.when(row.createdAt) }}</td><td>{{ nameOf(row.ingredientId) }}</td><td>{{ row.movementType }}</td><td>{{ row.direction }}</td><td class="text-right tabular">{{ format.qty(row.quantity) }}</td><td>{{ row.reason }}</td></tr> }</tbody>
+    </table></div>
+  }
+</section>

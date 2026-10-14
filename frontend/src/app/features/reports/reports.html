@@ -1,0 +1,56 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div><p class="text-sm text-base-content/70">Finanzas</p><h1 class="font-display text-3xl">Reportes</h1></div>
+    <div class="flex gap-2 no-print">
+      <button type="button" class="btn btn-sm" (click)="exportCsv()">Exportar CSV</button>
+      <button type="button" class="btn btn-sm" (click)="exportPdf()">Exportar PDF</button>
+      <button type="button" class="btn btn-sm" (click)="printPdf()">Imprimir</button>
+    </div>
+  </header>
+  <form class="flex flex-wrap items-end gap-2 no-print" [formGroup]="form" (ngSubmit)="load()">
+    <label class="form-control"><span class="label-text">Reporte</span>
+      <select class="select select-bordered" formControlName="type">
+        @for (item of types; track item[0]) { <option [value]="item[0]">{{ item[1] }}</option> }
+        @if (session.can('reports.financial')) { <option value="income-statement">Estado de resultados</option> }
+      </select>
+    </label>
+    <label class="form-control"><span class="label-text">Período</span>
+      <select class="select select-bordered" formControlName="preset"><option value="today">Hoy</option><option value="week">Semana</option><option value="month">Mes</option><option value="quarter">Trimestre</option><option value="year">Año</option><option value="custom">Personalizado</option></select>
+    </label>
+    <label class="form-control"><span class="label-text">Desde</span><input class="input input-bordered" type="date" formControlName="from" /></label>
+    <label class="form-control"><span class="label-text">Hasta</span><input class="input input-bordered" type="date" formControlName="to" /></label>
+    <button class="btn btn-primary" type="submit">Consultar</button>
+  </form>
+  @if (loading()) { <span class="loading loading-spinner" role="status" aria-label="Cargando reporte"></span> }
+  @if (income(); as row) {
+    <article class="card bg-base-100 shadow-sm"><div class="card-body">
+      <h2 class="card-title">Estado de resultados · {{ row.currency }}</h2>
+      <p class="text-sm">{{ format.day(row.from) }} – {{ format.day(row.to) }}</p>
+      <table class="table"><tbody>
+        <tr><td>Ventas brutas</td><td class="text-right tabular">{{ format.money(row.grossSales) }}</td></tr>
+        <tr><td>Descuentos</td><td class="text-right tabular">{{ format.money(row.discounts) }}</td></tr>
+        <tr><td>Devoluciones</td><td class="text-right tabular">{{ format.money(row.returns) }}</td></tr>
+        <tr><td>Ingresos netos</td><td class="text-right tabular">{{ format.money(row.netSales) }}</td></tr>
+        <tr><td>Costo de productos vendidos</td><td class="text-right tabular">{{ format.money(row.cogs) }}</td></tr>
+        <tr><td>Ganancia bruta</td><td class="text-right tabular">{{ format.money(row.grossProfit) }}</td></tr>
+        <tr><td>Gastos operativos</td><td class="text-right tabular">{{ format.money(row.operatingExpenses) }}</td></tr>
+        <tr><td>Resultado operativo</td><td class="text-right tabular">{{ format.money(row.operatingResult) }}</td></tr>
+        <tr><td>Otros ingresos</td><td class="text-right tabular">{{ format.money(row.otherIncome) }}</td></tr>
+        <tr><td>Otros gastos</td><td class="text-right tabular">{{ format.money(row.otherExpenses) }}</td></tr>
+        <tr><td>Resultado neto estimado</td><td class="text-right tabular font-semibold">{{ format.money(row.netResult) }}</td></tr>
+        <tr><td>ITBIS trasladado, fuera del resultado</td><td class="text-right tabular">{{ format.money(row.taxCollected) }}</td></tr>
+      </tbody></table>
+      <p class="text-sm text-base-content/70">{{ row.methodology }}</p>
+    </div></article>
+  }
+  @if (table(); as row) {
+    <article class="card bg-base-100 shadow-sm"><div class="card-body">
+      <h2 class="card-title">{{ row.title }}</h2>
+      @if (!row.rows.length) { <p>No hay movimientos en el período.</p> }
+      <div class="overflow-x-auto"><table class="table"><thead><tr>@for (column of row.columns; track column) { <th>{{ column }}</th> }</tr></thead>
+        <tbody>@for (line of row.rows; track $index) { <tr>@for (cell of line; track $index) { <td class="tabular">{{ cell }}</td> }</tr> }</tbody>
+      </table></div>
+      <p class="text-sm text-base-content/70">{{ row.note }}</p>
+    </div></article>
+  }
+</section>

@@ -1,0 +1,40 @@
+<section class="space-y-4">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="text-sm text-base-content/70">Producción</p>
+      <h1 class="font-display text-3xl">Cocina</h1>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <label class="form-control">
+        <span class="sr-only">Filtrar estación</span>
+        <input class="input input-bordered" placeholder="Estación" [value]="station()" (input)="station.set($any($event.target).value)" />
+      </label>
+      <button type="button" class="btn" (click)="toggleHistory()">{{ history() ? 'Ver activas' : 'Historial' }}</button>
+      <button type="button" class="btn" (click)="print()">Imprimir</button>
+    </div>
+  </header>
+  @if (!session.branchId()) { <div class="alert">Seleccione una sucursal para ver sus comandas.</div> }
+  @else if (!visible().length) { <div class="alert">No hay comandas {{ history() ? 'en el historial reciente' : 'pendientes' }}.</div> }
+  <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    @for (ticket of visible(); track ticket.id) {
+      <article class="card bg-base-100 shadow-sm" [class.border]="ticket.delayed" [class.border-error]="ticket.delayed">
+        <div class="card-body gap-2">
+          <div class="flex items-start justify-between">
+            <h2 class="font-display text-2xl">{{ ticket.orderNumber }}</h2>
+            <span class="badge" [class.badge-error]="ticket.delayed">{{ label(states, ticket.status) }}</span>
+          </div>
+          <p class="text-sm">{{ ticket.stationName }} · {{ ticket.tableId ? 'mesa ' + ticket.tableId : 'sin mesa' }} · {{ ticket.elapsedMinutes }} min</p>
+          <p class="text-sm text-base-content/70">Recibida {{ format.when(ticket.receivedAt) }} @if (ticket.delayed) { · con retraso }</p>
+          <ul>
+            @for (item of ticket.items; track item.id) {
+              <li><span class="tabular">{{ format.qty(item.quantity) }}</span> {{ item.name }} @if (item.notes) { · {{ item.notes }} }</li>
+            }
+          </ul>
+          @if (session.can('kitchen.update') && ticket.status !== 'DELIVERED' && ticket.status !== 'CANCELLED') {
+            <button type="button" class="btn btn-primary btn-sm" (click)="advance(ticket)">Avanzar estado</button>
+          }
+        </div>
+      </article>
+    }
+  </div>
+</section>

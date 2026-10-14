@@ -1,0 +1,117 @@
+<a class="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:bg-base-100 focus:px-3 focus:py-2" href="#contenido">
+  Saltar al contenido
+</a>
+<div class="min-h-dvh bg-base-200 text-base-content">
+  <div class="drawer lg:drawer-open">
+    <input id="menu-movil" type="checkbox" class="drawer-toggle" [checked]="mobile()" (change)="mobile.set($any($event.target).checked)" />
+    <div class="drawer-content flex min-h-dvh flex-col">
+      <header class="navbar no-print sticky top-0 z-30 border-b border-base-300 bg-base-100/95 px-3 backdrop-blur">
+        <div class="flex-none lg:hidden">
+          <label for="menu-movil" class="btn btn-ghost btn-square" aria-label="Abrir menú">
+            <span aria-hidden="true">☰</span>
+          </label>
+        </div>
+        <div class="flex-1 gap-2 px-1">
+          <button type="button" class="btn btn-ghost btn-sm hidden lg:inline-flex" (click)="session.toggleSidebar()" [attr.aria-expanded]="session.sidebarOpen()" aria-controls="menu-principal">
+            {{ session.sidebarOpen() ? 'Ocultar menú' : 'Mostrar menú' }}
+          </button>
+        </div>
+        @if (session.can('branches.switch') || branches().length > 1) {
+          <label class="form-control hidden sm:block">
+            <span class="sr-only">Sucursal</span>
+            <select class="select select-bordered select-sm" [value]="session.branchId() ?? ''" (change)="branchChange($any($event.target).value)">
+              @if (session.can('branches.switch')) {
+                <option value="">Todas las sucursales</option>
+              }
+              @for (branch of branches(); track branch.id) {
+                <option [value]="branch.id">{{ branch.name }}</option>
+              }
+            </select>
+          </label>
+        }
+        <button type="button" class="btn btn-ghost btn-sm" (click)="notesOpen.set(!notesOpen())" [attr.aria-expanded]="notesOpen()" aria-controls="avisos">
+          Avisos
+          @if (notes().length) {
+            <span class="badge badge-warning badge-sm">{{ notes().length }}</span>
+          }
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" (click)="session.toggleTheme()">
+          {{ session.theme() === 'fogon' ? 'Tema oscuro' : 'Tema claro' }}
+        </button>
+        <div class="dropdown dropdown-end">
+          <button type="button" tabindex="0" class="btn btn-ghost btn-sm">{{ session.profile()?.fullName }}</button>
+          <ul tabindex="0" class="menu dropdown-content z-40 mt-2 w-56 rounded-box bg-base-100 p-2 shadow">
+            <li class="px-3 py-2 text-sm text-base-content/70">{{ session.profile()?.email }}</li>
+            <li><a routerLink="/configuracion">Configuración y contraseña</a></li>
+            <li><button type="button" (click)="logout()">Cerrar sesión</button></li>
+          </ul>
+        </div>
+      </header>
+      @if (notesOpen()) {
+        <section id="avisos" class="no-print border-b border-base-300 bg-base-100 px-4 py-3" aria-label="Avisos operativos">
+          @if (!notes().length) {
+            <p class="text-sm text-base-content/70">No hay existencias bajas ni comandas pendientes en la sucursal seleccionada.</p>
+          } @else {
+            <ul class="space-y-2">
+              @for (note of notes(); track note.message) {
+                <li class="alert alert-warning py-2">
+                  <span><strong>{{ note.title }}.</strong> {{ note.message }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+      <main id="contenido" class="flex-1 p-4 md:p-6">
+        <router-outlet />
+      </main>
+    </div>
+    <aside class="drawer-side z-40 no-print" [class.lg:w-72]="session.sidebarOpen()" [class.lg:w-20]="!session.sidebarOpen()">
+      <label for="menu-movil" class="drawer-overlay" aria-label="Cerrar menú"></label>
+      <nav id="menu-principal" class="flex min-h-full flex-col bg-base-100" [class.w-72]="session.sidebarOpen()" [class.w-20]="!session.sidebarOpen()" aria-label="Principal">
+        <div class="border-b border-base-300 px-4 py-5">
+          <p class="font-display text-2xl tracking-tight">Fogón</p>
+          @if (session.sidebarOpen()) {
+            <p class="text-sm text-base-content/70">{{ session.profile()?.restaurantName }}</p>
+          }
+        </div>
+        <ul class="menu flex-1 px-2 py-3">
+          @for (item of nav; track item.path) {
+            @if (visible(item)) {
+              <li>
+                <a [routerLink]="item.path" routerLinkActive="active" (click)="mobile.set(false)" [attr.aria-label]="item.label" [title]="item.label">
+                  @if (session.sidebarOpen()) {
+                    {{ item.label }}
+                  } @else {
+                    <span class="font-semibold">{{ item.label.slice(0, 1) }}</span>
+                  }
+                </a>
+              </li>
+            }
+          }
+        </ul>
+      </nav>
+    </aside>
+  </div>
+</div>
+<div class="toast toast-end toast-bottom z-50 no-print" aria-live="polite">
+  @for (toast of session.toasts(); track toast.id) {
+    <div class="alert shadow" [class.alert-success]="toast.level === 'success'" [class.alert-error]="toast.level === 'error'" [class.alert-info]="toast.level === 'info'">
+      <span>{{ toast.message }}</span>
+      <button type="button" class="btn btn-ghost btn-xs" (click)="session.dismiss(toast.id)">Cerrar</button>
+    </div>
+  }
+</div>
+@if (session.confirmRequest(); as ask) {
+  <dialog class="modal modal-open" aria-labelledby="confirm-title" aria-modal="true">
+    <div class="modal-box">
+      <h2 id="confirm-title" class="text-lg font-semibold">{{ ask.title }}</h2>
+      <p class="py-3">{{ ask.message }}</p>
+      <div class="modal-action">
+        <button type="button" class="btn" (click)="session.answer(false)">Cancelar</button>
+        <button type="button" class="btn btn-error" (click)="session.answer(true)">{{ ask.confirmLabel }}</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button type="button" (click)="session.answer(false)">Cerrar</button></form>
+  </dialog>
+}
