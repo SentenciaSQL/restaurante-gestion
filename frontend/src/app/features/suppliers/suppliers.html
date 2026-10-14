@@ -1,0 +1,16 @@
+<section class="space-y-4">
+  <header><p class="text-sm text-base-content/70">Abastecimiento</p><h1 class="font-display text-3xl">Proveedores</h1></header>
+  <form class="card bg-base-100 shadow-sm" [formGroup]="form" (ngSubmit)="save()"><div class="card-body grid gap-2 md:grid-cols-3">
+    <label class="form-control"><span class="label-text">Nombre</span><input class="input input-bordered" formControlName="name" /></label>
+    <label class="form-control"><span class="label-text">RNC o cédula</span><input class="input input-bordered" formControlName="taxId" /></label>
+    <label class="form-control"><span class="label-text">Teléfono</span><input class="input input-bordered" formControlName="phone" /></label>
+    <label class="form-control"><span class="label-text">Correo</span><input class="input input-bordered" type="email" formControlName="email" /></label>
+    <label class="form-control md:col-span-2"><span class="label-text">Dirección</span><input class="input input-bordered" formControlName="address" /></label>
+    <label class="flex items-center gap-2"><input type="checkbox" class="checkbox" formControlName="active" /> Activo</label>
+    <button class="btn btn-primary w-fit" type="submit" [disabled]="form.invalid">Guardar proveedor</button>
+  </div></form>
+  @if (!rows().length) { <div class="alert">No hay proveedores. Registre el primero para crear órdenes de compra.</div> }
+  <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table"><thead><tr><th>Nombre</th><th>Identificación</th><th>Teléfono</th><th>Estado</th><th></th></tr></thead>
+    <tbody>@for (row of rows(); track row.id) { <tr><td>{{ row.name }}</td><td>{{ row.taxId }}</td><td>{{ row.phone }}</td><td>{{ row.active ? 'Activo' : 'Inactivo' }}</td><td><button type="button" class="btn btn-ghost btn-xs" (click)="edit(row)">Editar</button></td></tr> }</tbody>
+  </table></div>
+</section>

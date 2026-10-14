@@ -1,0 +1,105 @@
+<section class="space-y-6">
+  <header class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p class="text-sm text-base-content/70">Salón</p>
+      <h1 class="font-display text-3xl">Mesas y áreas</h1>
+    </div>
+    <label class="form-control w-full max-w-xs">
+      <span class="sr-only">Buscar mesa</span>
+      <input class="input input-bordered" placeholder="Buscar por número o área" [value]="query()" (input)="query.set($any($event.target).value)" />
+    </label>
+  </header>
+  @if (!session.branchId()) {
+    <div class="alert">Seleccione una sucursal en la barra superior. Las mesas pertenecen a una sucursal.</div>
+  } @else if (loading()) {
+    <span class="loading loading-spinner loading-lg" role="status" aria-label="Cargando mesas"></span>
+  } @else {
+    @if (session.can('tables.manage')) {
+      <div class="grid gap-4 lg:grid-cols-2">
+        <form class="card bg-base-100 shadow-sm" [formGroup]="areaForm" (ngSubmit)="saveArea()">
+          <div class="card-body">
+            <h2 class="card-title text-base">Nueva área</h2>
+            <label class="form-control"><span class="label-text">Nombre</span><input class="input input-bordered" formControlName="name" /></label>
+            <button class="btn btn-primary btn-sm w-fit" type="submit" [disabled]="areaForm.invalid">Guardar área</button>
+          </div>
+        </form>
+        <form class="card bg-base-100 shadow-sm" [formGroup]="tableForm" (ngSubmit)="saveTable()">
+          <div class="card-body gap-2">
+            <h2 class="card-title text-base">{{ tableForm.controls.id.value ? 'Editar mesa' : 'Nueva mesa' }}</h2>
+            <label class="form-control"><span class="label-text">Área</span>
+              <select class="select select-bordered" formControlName="areaId"><option [ngValue]="null">Seleccione</option>@for (area of areas(); track area.id) { <option [ngValue]="area.id">{{ area.name }}</option> }</select>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="form-control"><span class="label-text">Número</span><input class="input input-bordered" formControlName="tableNumber" /></label>
+              <label class="form-control"><span class="label-text">Capacidad</span><input class="input input-bordered" type="number" min="1" formControlName="capacity" /></label>
+            </div>
+            <button class="btn btn-primary btn-sm w-fit" type="submit" [disabled]="tableForm.invalid">Guardar mesa</button>
+          </div>
+        </form>
+      </div>
+    }
+    @if (!visible().length) {
+      <div class="alert">No hay mesas que coincidan. Cree un área y una mesa para abrir cuentas.</div>
+    }
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      @for (table of visible(); track table.id) {
+        <article class="card bg-base-100 shadow-sm">
+          <div class="card-body gap-2">
+            <div class="flex items-start justify-between gap-2">
+              <h2 class="font-display text-2xl">{{ table.tableNumber }}</h2>
+              <span class="badge" [class.badge-success]="table.status === 'AVAILABLE'" [class.badge-warning]="table.status === 'OCCUPIED'" [class.badge-info]="table.status === 'RESERVED'" [class.badge-ghost]="table.status === 'CLEANING'">{{ label(tableStatus, table.status) }}</span>
+            </div>
+            <p class="text-sm">{{ areaName(table.areaId) }} · {{ table.capacity }} personas · {{ waiterName(table.assignedWaiterId) }}</p>
+            @if (session.can('tables.operate')) {
+              <label class="form-control">
+                <span class="sr-only">Asignar mesero a la mesa {{ table.tableNumber }}</span>
+                <select class="select select-bordered select-sm" (change)="assign(table, $any($event.target).value)">
+                  <option value="">Asignar mesero…</option>
+                  @for (person of staff(); track person.id) { <option [value]="person.id">{{ person.fullName }}</option> }
+                </select>
+              </label>
+              <div class="flex flex-wrap gap-2">
+                @if (table.status === 'AVAILABLE' && session.can('orders.create')) {
+                  <button type="button" class="btn btn-primary btn-sm" (click)="openAccount(table)">Abrir cuenta</button>
+                }
+                @if (table.status !== 'OCCUPIED') {
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="release(table)">Liberar</button>
+                  <button type="button" class="btn btn-ghost btn-sm" (click)="reserveForm.patchValue({ tableId: table.id })">Reservar</button>
+                }
+                @if (session.can('tables.manage')) { <button type="button" class="btn btn-ghost btn-sm" (click)="edit(table)">Editar</button> }
+                <button type="button" class="btn btn-ghost btn-sm" (click)="openHistory(table)">Historial</button>
+              </div>
+            }
+          </div>
+        </article>
+      }
+    </div>
+    @if (reserveForm.controls.tableId.value) {
+      <form class="card bg-base-100 shadow-sm" [formGroup]="reserveForm" (ngSubmit)="saveReserve()">
+        <div class="card-body grid gap-2 md:grid-cols-3">
+          <h2 class="card-title text-base md:col-span-3">Reserva</h2>
+          <label class="form-control"><span class="label-text">Cliente</span><input class="input input-bordered" formControlName="customerName" /></label>
+          <label class="form-control"><span class="label-text">Teléfono</span><input class="input input-bordered" formControlName="phone" /></label>
+          <label class="form-control"><span class="label-text">Personas</span><input class="input input-bordered" type="number" min="1" formControlName="partySize" /></label>
+          <label class="form-control"><span class="label-text">Desde</span><input class="input input-bordered" type="datetime-local" formControlName="from" /></label>
+          <label class="form-control"><span class="label-text">Hasta</span><input class="input input-bordered" type="datetime-local" formControlName="until" /></label>
+          <div class="md:col-span-3"><button class="btn btn-primary btn-sm" type="submit" [disabled]="reserveForm.invalid">Guardar reserva</button></div>
+        </div>
+      </form>
+    }
+  }
+</section>
+@if (historyOpen()) {
+  <dialog class="modal modal-open" aria-labelledby="hist-title">
+    <div class="modal-box max-w-2xl">
+      <h2 id="hist-title" class="text-lg font-semibold">Historial de ocupación</h2>
+      @if (!history().length) { <p class="py-3">Esta mesa todavía no tiene ocupación registrada.</p> }
+      <ul class="space-y-2 py-3 text-sm">
+        @for (row of history(); track row.openedAt) {
+          <li>{{ label(tableStatus, row.status) }} · {{ format.when(row.openedAt) }} @if (row.closedAt) { → {{ format.when(row.closedAt) }} } @if (row.orderId) { · pedido {{ row.orderId }} }</li>
+        }
+      </ul>
+      <button type="button" class="btn" (click)="historyOpen.set(false)">Cerrar</button>
+    </div>
+  </dialog>
+}

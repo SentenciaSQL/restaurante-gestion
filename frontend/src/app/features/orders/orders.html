@@ -1,0 +1,45 @@
+<section class="space-y-4">
+  <header>
+    <p class="text-sm text-base-content/70">Servicio</p>
+    <h1 class="font-display text-3xl">Pedidos</h1>
+  </header>
+  <form class="flex flex-wrap items-end gap-2" [formGroup]="form" (ngSubmit)="form.controls.page.setValue(0); load()">
+    <label class="form-control"><span class="label-text">Buscar</span><input class="input input-bordered" formControlName="q" /></label>
+    <label class="form-control"><span class="label-text">Cuenta</span>
+      <select class="select select-bordered" formControlName="accountStatus"><option value="">Todas</option><option value="OPEN">Abiertas</option><option value="CLOSED">Cerradas</option><option value="CANCELLED">Canceladas</option></select>
+    </label>
+    <label class="form-control"><span class="label-text">Tipo</span>
+      <select class="select select-bordered" formControlName="orderType"><option value="">Todos</option><option value="DINE_IN">En mesa</option><option value="TAKEAWAY">Para llevar</option><option value="DELIVERY">A domicilio</option></select>
+    </label>
+    <button class="btn btn-primary" type="submit">Filtrar</button>
+  </form>
+  @if (loading()) { <span class="loading loading-spinner" role="status" aria-label="Cargando pedidos"></span> }
+  @else if (!rows().length) { <div class="alert">No hay pedidos con esos filtros.</div> }
+  @else {
+    <div class="overflow-x-auto bg-base-100 shadow-sm">
+      <table class="table">
+        <thead><tr><th>Número</th><th>Tipo</th><th>Mesa</th><th>Preparación</th><th>Cuenta</th><th class="text-right">Total</th><th class="text-right">Pagado</th><th>Apertura</th><th></th></tr></thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>{{ row.orderNumber }}</td>
+              <td>{{ label(types, row.orderType) }}</td>
+              <td>{{ row.tableLabel || row.customerName || '—' }}</td>
+              <td>{{ label(prep, row.preparationStatus) }}</td>
+              <td>{{ label(account, row.accountStatus) }}</td>
+              <td class="text-right tabular">{{ format.money(row.totalAmount) }}</td>
+              <td class="text-right tabular">{{ format.money(row.paidAmount) }}</td>
+              <td>{{ format.when(row.openedAt) }}</td>
+              <td><a class="btn btn-ghost btn-xs" [routerLink]="['/pos', row.id]">Abrir</a></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" class="btn btn-sm" (click)="turn(-1)" [disabled]="form.controls.page.value === 0">Anterior</button>
+      <span class="text-sm tabular">Página {{ form.controls.page.value + 1 }} · {{ total() }} pedidos</span>
+      <button type="button" class="btn btn-sm" (click)="turn(1)" [disabled]="(form.controls.page.value + 1) * 20 >= total()">Siguiente</button>
+    </div>
+  }
+</section>

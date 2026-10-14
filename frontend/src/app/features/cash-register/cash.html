@@ -1,0 +1,45 @@
+<section class="space-y-4">
+  <header><p class="text-sm text-base-content/70">Finanzas</p><h1 class="font-display text-3xl">Caja</h1></header>
+  @if (!session.branchId()) { <div class="alert">La caja se abre por sucursal. Seleccione una.</div> }
+  @else if (current(); as box) {
+    @if (!box.open) {
+      <form class="card max-w-lg bg-base-100 shadow-sm" [formGroup]="openForm" (ngSubmit)="open()"><div class="card-body">
+        <h2 class="card-title text-base">Abrir caja</h2>
+        <label class="form-control"><span class="label-text">Fondo inicial</span><input class="input input-bordered" type="number" min="0" step="0.01" formControlName="openingFloat" /></label>
+        <label class="form-control"><span class="label-text">Notas</span><input class="input input-bordered" formControlName="notes" /></label>
+        @if (session.can('cash.operate')) { <button class="btn btn-primary w-fit" type="submit">Abrir</button> }
+      </div></form>
+    } @else if (box.session) {
+      <div class="stats bg-base-100 shadow-sm">
+        <div class="stat"><div class="stat-title">Fondo inicial</div><div class="stat-value text-2xl tabular">{{ format.money(box.session.openingFloat) }}</div></div>
+        <div class="stat"><div class="stat-title">Efectivo esperado</div><div class="stat-value text-2xl tabular">{{ format.money(box.expectedCash) }}</div></div>
+      </div>
+      @if (session.can('cash.operate')) {
+        <form class="card bg-base-100 shadow-sm" [formGroup]="moveForm" (ngSubmit)="move()"><div class="card-body grid gap-2 md:grid-cols-4">
+          <select class="select select-bordered" formControlName="type" aria-label="Tipo de movimiento"><option value="PAY_IN">Ingreso</option><option value="PAY_OUT">Egreso</option></select>
+          <input class="input input-bordered" type="number" min="0.01" step="0.01" formControlName="amount" aria-label="Importe" />
+          <input class="input input-bordered" formControlName="description" placeholder="Descripción" aria-label="Descripción" />
+          <button class="btn btn-primary" type="submit" [disabled]="moveForm.invalid">Registrar</button>
+        </div></form>
+      }
+      <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table table-sm"><thead><tr><th>Fecha</th><th>Tipo</th><th>Dirección</th><th class="text-right">Importe</th><th>Detalle</th></tr></thead>
+        <tbody>@for (row of box.movements ?? []; track row.id) { <tr><td>{{ format.when(row.createdAt) }}</td><td>{{ row.movementType }}</td><td>{{ row.direction }}</td><td class="text-right tabular">{{ format.money(row.amount) }}</td><td>{{ row.description }}</td></tr> }</tbody>
+      </table></div>
+      @if (session.can('cash.close')) {
+        <form class="card bg-base-100 shadow-sm" [formGroup]="closeForm" (ngSubmit)="close()"><div class="card-body">
+          <h2 class="card-title text-base">Cierre</h2>
+          <label class="form-control max-w-xs"><span class="label-text">Efectivo contado</span><input class="input input-bordered" type="number" min="0" step="0.01" formControlName="countedCash" /></label>
+          <label class="form-control max-w-lg"><span class="label-text">Notas</span><input class="input input-bordered" formControlName="notes" /></label>
+          <button class="btn btn-secondary w-fit" type="submit">Cerrar caja</button>
+        </div></form>
+      }
+    }
+  }
+  <h2 class="text-lg font-semibold">Cierres anteriores</h2>
+  @if (history(); as table) {
+    @if (!table.rows.length) { <p>Aún no hay cierres.</p> }
+    <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table table-sm"><thead><tr>@for (column of table.columns; track column) { <th>{{ column }}</th> }</tr></thead>
+      <tbody>@for (row of table.rows; track $index) { <tr>@for (cell of row; track $index) { <td class="tabular">{{ cell }}</td> }</tr> }</tbody>
+    </table></div>
+  }
+</section>

@@ -1,0 +1,58 @@
+<section class="space-y-4">
+  <header><p class="text-sm text-base-content/70">Abastecimiento</p><h1 class="font-display text-3xl">Compras</h1></header>
+  @if (!session.branchId()) { <div class="alert">Seleccione una sucursal.</div> }
+  @else {
+    @if (session.can('purchases.manage')) {
+      <form class="card bg-base-100 shadow-sm" [formGroup]="form" (ngSubmit)="create()"><div class="card-body grid gap-2 md:grid-cols-3">
+        <h2 class="card-title text-base md:col-span-3">Nueva orden</h2>
+        <select class="select select-bordered" formControlName="supplierId" aria-label="Proveedor"><option [ngValue]="null">Proveedor</option>@for (row of suppliers(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+        <select class="select select-bordered" formControlName="warehouseId" aria-label="Almacén"><option [ngValue]="null">Almacén</option>@for (row of warehouses(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+        <input class="input input-bordered" type="date" formControlName="expectedDate" aria-label="Fecha esperada" />
+        <select class="select select-bordered" formControlName="ingredientId" aria-label="Artículo"><option [ngValue]="null">Artículo</option>@for (row of ingredients(); track row.id) { <option [ngValue]="row.id">{{ row.name }}</option> }</select>
+        <input class="input input-bordered" type="number" min="0.001" step="0.001" formControlName="quantity" aria-label="Cantidad solicitada" />
+        <input class="input input-bordered" type="number" min="0" step="0.0001" formControlName="unitCost" aria-label="Costo unitario" />
+        <input class="input input-bordered" type="number" min="0" step="0.01" formControlName="taxRate" aria-label="Tasa de impuesto" />
+        <button type="button" class="btn btn-sm" (click)="addLine()">Agregar línea</button>
+        <ul class="md:col-span-3 text-sm">@for (line of lines(); track $index) { <li>{{ ingredientName(line.ingredientId) }} · {{ format.qty(line.quantity) }} × {{ format.money(line.unitCost) }}</li> }</ul>
+        <input class="input input-bordered md:col-span-2" formControlName="notes" placeholder="Notas" aria-label="Notas" />
+        <button class="btn btn-primary" type="submit" [disabled]="!lines().length">Crear orden</button>
+      </div></form>
+    }
+    <div class="overflow-x-auto bg-base-100 shadow-sm"><table class="table"><thead><tr><th>Número</th><th>Proveedor</th><th>Estado</th><th class="text-right">Total</th><th class="text-right">Pagado</th><th></th></tr></thead>
+      <tbody>@for (row of orders(); track row.id) { <tr><td>{{ row.number }}</td><td>{{ supplierName(row.supplierId) }}</td><td>{{ label(states, row.status) }}</td><td class="text-right tabular">{{ format.money(row.totalAmount) }}</td><td class="text-right tabular">{{ format.money(row.paidAmount) }}</td><td><button type="button" class="btn btn-ghost btn-xs" (click)="open(row.id)">Abrir</button></td></tr> }</tbody>
+    </table></div>
+    @if (detail(); as row) {
+      <article class="card bg-base-100 shadow-sm"><div class="card-body gap-3">
+        <h2 class="card-title">{{ row.order.number }} · {{ label(states, row.order.status) }}</h2>
+        <table class="table table-sm"><thead><tr><th>Artículo</th><th class="text-right">Pedido</th><th class="text-right">Recibido</th><th class="text-right">Diferencia</th><th></th></tr></thead>
+          <tbody>@for (line of row.lines; track line.id) {
+            <tr>
+              <td>{{ ingredientName(line.ingredientId) }}</td>
+              <td class="text-right tabular">{{ format.qty(line.quantityOrdered) }}</td>
+              <td class="text-right tabular">{{ format.qty(line.quantityReceived) }}</td>
+              <td class="text-right tabular">{{ format.qty(line.quantityOrdered - line.quantityReceived) }}</td>
+              <td>@if (session.can('purchases.receive') && line.quantityReceived < line.quantityOrdered && row.order.status !== 'DRAFT' && row.order.status !== 'CANCELLED') {
+                <form class="flex gap-1" (submit)="$event.preventDefault(); receive(line.id, $any($event.target).qty.value, $any($event.target).ref.value)">
+                  <input class="input input-bordered input-xs w-20" name="qty" type="number" min="0.001" step="0.001" aria-label="Cantidad recibida" />
+                  <input class="input input-bordered input-xs w-28" name="ref" placeholder="Documento" aria-label="Documento de soporte" />
+                  <button class="btn btn-xs" type="submit">Recibir</button>
+                </form>
+              }</td>
+            </tr>
+          }</tbody>
+        </table>
+        <div class="flex flex-wrap gap-2">
+          @if (session.can('purchases.manage') && row.order.status === 'DRAFT') { <button type="button" class="btn btn-primary btn-sm" (click)="markOrdered()">Marcar ordenada</button> }
+          @if (session.can('purchases.manage') && row.order.status !== 'CANCELLED' && row.lines.every(line => line.quantityReceived === 0)) { <button type="button" class="btn btn-ghost btn-sm" (click)="cancel()">Cancelar</button> }
+        </div>
+        @if (session.can('purchases.manage') && row.order.status !== 'CANCELLED' && row.order.status !== 'DRAFT') {
+          <form class="flex flex-wrap gap-2" (submit)="$event.preventDefault(); pay($any($event.target).amount.value, $any($event.target).method.value)">
+            <input class="input input-bordered input-sm" name="amount" type="number" min="0.01" step="0.01" aria-label="Importe del pago" />
+            <select class="select select-bordered select-sm" name="method" aria-label="Método de pago al proveedor"><option value="">Método</option>@for (method of methods(); track method.id) { <option [value]="method.id">{{ method.name }}</option> }</select>
+            <button class="btn btn-sm" type="submit">Pagar proveedor</button>
+          </form>
+        }
+      </div></article>
+    }
+  }
+</section>
