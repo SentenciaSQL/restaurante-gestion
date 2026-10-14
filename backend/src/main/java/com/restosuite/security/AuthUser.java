@@ -1,6 +1,5 @@
 package com.restosuite.security;
 
-import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,7 +8,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-@Getter
 public class AuthUser implements UserDetails {
 
     private final Long id;
@@ -33,6 +31,43 @@ public class AuthUser implements UserDetails {
         this.active = active;
         this.roles = Set.copyOf(roles);
         this.permissions = Set.copyOf(permissions);
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    @Override
+    public String getPassword() {
+        return password;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public Long getRestaurantId() {
+        return restaurantId;
+    }
+
+    public Long getBranchId() {
+        return branchId;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public Set<String> getRoles() {
+        return roles;
+    }
+
+    public Set<String> getPermissions() {
+        return permissions;
     }
 
     @Override
