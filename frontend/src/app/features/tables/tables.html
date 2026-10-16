@@ -51,16 +51,22 @@
             </div>
             <p class="text-sm">{{ areaName(table.areaId) }} · {{ table.capacity }} personas · {{ waiterName(table.assignedWaiterId) }}</p>
             @if (session.can('tables.operate')) {
-              <label class="form-control">
-                <span class="sr-only">Asignar mesero a la mesa {{ table.tableNumber }}</span>
-                <select class="select select-bordered select-sm" (change)="assign(table, $any($event.target).value)">
-                  <option value="">Asignar mesero…</option>
-                  @for (person of staff(); track person.id) { <option [value]="person.id">{{ person.fullName }}</option> }
+              <label class="form-control" [attr.for]="'mesero-' + table.id">
+                <span class="label-text" [id]="'mesero-label-' + table.id">Mesero</span>
+                <select class="select select-bordered select-sm" [id]="'mesero-' + table.id" [attr.aria-labelledby]="'mesero-label-' + table.id" [ngModel]="table.assignedWaiterId" [ngModelOptions]="{ standalone: true }" (ngModelChange)="assign(table, $event)">
+                  <option [ngValue]="null">Asignar mesero…</option>
+                  @for (person of staff(); track person.id) { <option [ngValue]="person.id">{{ person.fullName }}</option> }
+                  @if (table.assignedWaiterId && !waiterListed(table.assignedWaiterId)) {
+                    <option [ngValue]="table.assignedWaiterId">{{ waiterName(table.assignedWaiterId) }}</option>
+                  }
                 </select>
               </label>
               <div class="flex flex-wrap gap-2">
                 @if (table.status === 'AVAILABLE' && session.can('orders.create')) {
                   <button type="button" class="btn btn-primary btn-sm" (click)="openAccount(table)">Abrir cuenta</button>
+                }
+                @if (table.status === 'OCCUPIED' && session.can('orders.view')) {
+                  <button type="button" class="btn btn-primary btn-sm" (click)="continueAccount(table)">Continuar cuenta</button>
                 }
                 @if (table.status !== 'OCCUPIED') {
                   <button type="button" class="btn btn-ghost btn-sm" (click)="release(table)">Liberar</button>
@@ -100,6 +106,25 @@
         }
       </ul>
       <button type="button" class="btn" (click)="historyOpen.set(false)">Cerrar</button>
+    </div>
+  </dialog>
+}
+@if (accountTable(); as table) {
+  <dialog class="modal modal-open" aria-labelledby="accounts-title">
+    <div class="modal-box">
+      <h2 id="accounts-title" class="text-lg font-semibold">Cuentas de la mesa {{ table.tableNumber }}</h2>
+      <p class="py-2 text-sm">Hay más de una cuenta abierta. Elija la que desea continuar.</p>
+      <ul class="space-y-2">
+        @for (account of accounts(); track account.id) {
+          <li>
+            <button type="button" class="btn btn-block justify-between" (click)="openListedAccount(account.id)">
+              <span>{{ account.orderNumber }}</span>
+              <span class="tabular">{{ format.money(account.totalAmount) }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+      <button type="button" class="btn mt-4" (click)="accountTable.set(null)">Cerrar</button>
     </div>
   </dialog>
 }

@@ -269,6 +269,8 @@ export interface OrderView {
   orderType: string;
   tableId: number | null;
   tableLabel: string | null;
+  waiterId: number | null;
+  waiterName: string | null;
   customerName: string | null;
   customerPhone: string | null;
   deliveryAddress: string | null;

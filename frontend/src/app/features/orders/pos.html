@@ -81,7 +81,7 @@
           <div class="flex items-start justify-between gap-2">
             <div>
               <h2 class="font-display text-2xl">{{ current.orderNumber }}</h2>
-              <p class="text-sm">{{ label(types, current.orderType) }} @if (current.tableLabel) { · mesa {{ current.tableLabel }} } · {{ label(account, current.accountStatus) }} · {{ label(prep, current.preparationStatus) }}</p>
+              <p class="text-sm">{{ label(types, current.orderType) }} @if (current.tableLabel) { · mesa {{ current.tableLabel }} } @if (current.waiterName) { · mesero {{ current.waiterName }} } · {{ label(account, current.accountStatus) }} · {{ label(prep, current.preparationStatus) }}</p>
             </div>
           </div>
           <ul class="space-y-2 text-sm">

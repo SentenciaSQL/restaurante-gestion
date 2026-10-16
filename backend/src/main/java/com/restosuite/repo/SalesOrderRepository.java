@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 public interface SalesOrderRepository extends JpaRepository<SalesOrder, Long>, JpaSpecificationExecutor<SalesOrder> {
 
     java.util.Optional<SalesOrder> findByBranchIdAndOrderNumber(Long branchId, String orderNumber);
-    java.util.Optional<SalesOrder> findByTableIdAndAccountStatus(Long tableId, String accountStatus);
+    java.util.List<SalesOrder> findByTableIdAndAccountStatus(Long tableId, String accountStatus);
 
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

@@ -175,8 +175,14 @@ public class ApiController {
 
     @PostMapping("/api/tables/{id}/assign")
     @PreAuthorize("hasAuthority('tables.operate')")
-    public Object assign(@PathVariable Long id, @RequestBody Map<String, Long> body) {
-        return catalog.assignWaiter(id, body.get("waiterId"));
+    public Object assign(@PathVariable Long id, @RequestBody WaiterAssignment body) {
+        return catalog.assignWaiter(id, body.waiterId());
+    }
+
+    @GetMapping("/api/tables/{id}/open-orders")
+    @PreAuthorize("hasAuthority('orders.view') or hasAuthority('tables.view')")
+    public Object openOrders(@PathVariable Long id) {
+        return orders.openOnTable(id);
     }
 
     @PostMapping("/api/tables/{id}/release")
@@ -562,6 +568,8 @@ public class ApiController {
     }
 
     public record ProductWrite(Product product, List<ProductVariant> variants, List<Long> modifierIds, List<RecipeLine> recipe) {}
+
+    public record WaiterAssignment(Long waiterId) {}
     public record Move(Long branchId, Long warehouseId, Long ingredientId, String type, String direction, BigDecimal quantity, BigDecimal unitCost, String reason) {}
     public record Transfer(Long branchId, Long sourceWarehouseId, Long targetWarehouseId, Long ingredientId, BigDecimal quantity, String reason) {}
     public record PurchaseWrite(Long branchId, Long supplierId, Long warehouseId, LocalDate expectedDate, String notes, List<PurchaseService.LineInput> lines) {}

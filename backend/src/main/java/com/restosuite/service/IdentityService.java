@@ -93,10 +93,20 @@ public class IdentityService {
 
     @Transactional(readOnly = true)
     public List<StaffView> staff() {
+        return directory(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StaffView> waiters() {
+        return directory(Codes.ROLE_WAITER);
+    }
+
+    private List<StaffView> directory(String requiredRole) {
         Long restaurantId = support.user().getRestaurantId();
         return users.findAll().stream()
                 .filter(user -> user.isActive() && restaurantId.equals(user.getRestaurantId()))
                 .map(user -> new StaffView(user.getId(), user.getFullName(), users.roleCodes(user.getId())))
+                .filter(user -> requiredRole == null || user.roles().contains(requiredRole))
                 .sorted((left, right) -> left.fullName().compareToIgnoreCase(right.fullName()))
                 .toList();
     }

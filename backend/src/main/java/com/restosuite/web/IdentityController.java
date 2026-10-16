@@ -69,6 +69,12 @@ public class IdentityController {
         return identity.staff();
     }
 
+    @GetMapping("/api/staff/waiters")
+    @PreAuthorize("hasAuthority('tables.operate') or hasAuthority('orders.create') or hasAuthority('orders.update')")
+    public Object waiters() {
+        return identity.waiters();
+    }
+
     @GetMapping("/api/roles")
     @PreAuthorize("hasAuthority('users.manage')")
     public Object roles() {

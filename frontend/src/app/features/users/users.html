@@ -1,12 +1,12 @@
 <section class="space-y-4">
   <header class="flex flex-wrap items-end justify-between gap-3">
     <div><p class="text-sm text-base-content/70">Acceso</p><h1 class="font-display text-3xl">Usuarios y roles</h1></div>
-    <form class="flex gap-2" (ngSubmit)="search()">
+    <form class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center" (ngSubmit)="search()">
       <input class="input input-bordered" placeholder="Buscar nombre o correo" [value]="query()" (input)="query.set($any($event.target).value)" aria-label="Buscar usuario" />
       <button class="btn" type="submit">Buscar</button>
     </form>
   </header>
-  <form class="card bg-base-100 shadow-sm" [formGroup]="form" (ngSubmit)="save()"><div class="card-body grid gap-2 md:grid-cols-3">
+  <form class="card bg-base-100 shadow-sm" [formGroup]="form" (ngSubmit)="save()"><div class="card-body grid gap-4 md:grid-cols-3">
     <label class="form-control"><span class="label-text">Nombre</span><input class="input input-bordered" formControlName="fullName" /></label>
     <label class="form-control"><span class="label-text">Correo</span><input class="input input-bordered" type="email" formControlName="email" /></label>
     <label class="form-control"><span class="label-text">Teléfono</span><input class="input input-bordered" formControlName="phone" /></label>
