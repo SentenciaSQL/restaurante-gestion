@@ -1,11 +1,32 @@
+# OS files
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs and editors
 .idea/
 *.iml
 .vscode/
+
+# Local environment
 .env
+.env.*
+!.env.example
+
+# Runtime data
 uploads/
+
+# Build output
 backend/target/
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
+
+# Logs and crash reports
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+hs_err_pid*
+replay_pid*
