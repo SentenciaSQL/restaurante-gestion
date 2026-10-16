@@ -137,6 +137,11 @@ public class OrderService {
         order.setOrderNumber(sequences.next(request.branchId(), Codes.DOC_ORDER));
         order.setOrderType(type);
         order.setWaiterId(support.user().getId());
+        if (Codes.DINE_IN.equals(type) && request.tableId() != null) {
+            tables.findById(request.tableId())
+                    .map(com.restosuite.domain.DiningTable::getAssignedWaiterId)
+                    .ifPresent(order::setWaiterId);
+        }
         order.setCustomerName(Support.clean(request.customerName(), 160));
         order.setCustomerPhone(Support.clean(request.customerPhone(), 40));
         order.setDeliveryAddress(Support.clean(request.deliveryAddress(), 300));
@@ -166,6 +171,14 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderDto.OrderView get(Long id) {
         return view(loadReadable(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderDto.Summary> openOnTable(Long tableId) {
+        DiningTable table = tables.findById(tableId).orElseThrow(() -> ApiException.notFound("La mesa"));
+        DiningArea area = areas.findById(table.getAreaId()).orElseThrow();
+        support.access().checkBranch(area.getBranchId());
+        return orders.findByTableIdAndAccountStatus(tableId, Codes.OPEN).stream().map(this::summary).toList();
     }
 
     @Transactional(readOnly = true)

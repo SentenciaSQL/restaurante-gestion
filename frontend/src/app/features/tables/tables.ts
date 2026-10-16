@@ -1,16 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Api } from '../../core/api';
 import { errorMessage } from '../../core/error.interceptor';
-import { Area, DiningTable, Staff } from '../../core/models';
+import { Area, DiningTable, OrderSummary, Staff } from '../../core/models';
 import { Session } from '../../core/session';
 import { TABLE, label } from '../../core/labels';
 import { Format } from '../../core/format';
 
 @Component({
   selector: 'app-tables',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, FormsModule],
   templateUrl: './tables.html',
 })
 export class TablesPage {
@@ -23,6 +23,8 @@ export class TablesPage {
   readonly staff = signal<Staff[]>([]);
   readonly history = signal<{ status: string; openedAt: string; closedAt: string | null; orderId: number | null }[]>([]);
   readonly historyOpen = signal(false);
+  readonly accounts = signal<OrderSummary[]>([]);
+  readonly accountTable = signal<DiningTable | null>(null);
   readonly loading = signal(true);
   readonly query = signal('');
   readonly areaForm = inject(FormBuilder).nonNullable.group({ name: ['', Validators.required] });
@@ -48,7 +50,10 @@ export class TablesPage {
   constructor() {
     this.reload();
     if (this.session.can('tables.operate')) {
-      this.api.staff().subscribe({ next: (rows) => this.staff.set(rows.filter((row) => row.roles.includes('WAITER') || row.roles.includes('ADMIN') || row.roles.includes('MANAGER'))) });
+      this.api.waiters().subscribe({
+        next: (rows) => this.staff.set(rows),
+        error: (error: unknown) => this.session.toast('error', errorMessage(error)),
+      });
     }
   }
 
@@ -89,6 +94,10 @@ export class TablesPage {
     return this.staff().find((person) => person.id === id)?.fullName ?? 'Asignado';
   }
 
+  waiterListed(id: number | null): boolean {
+    return id != null && this.staff().some((person) => person.id === id);
+  }
+
   saveArea(): void {
     const branch = this.session.branchId();
     if (!branch || this.areaForm.invalid) return;
@@ -119,10 +128,15 @@ export class TablesPage {
     });
   }
 
-  assign(table: DiningTable, waiterId: string): void {
-    if (!waiterId) return;
-    this.api.assignWaiter(table.id, Number(waiterId)).subscribe({
-      next: () => this.reload(),
+  assign(table: DiningTable, waiterId: number | string | null): void {
+    if (waiterId == null || waiterId === '') return;
+    const id = Number(waiterId);
+    if (!Number.isFinite(id) || id === table.assignedWaiterId) return;
+    this.api.assignWaiter(table.id, id).subscribe({
+      next: (saved) => {
+        this.tables.update((rows) => rows.map((row) => (row.id === saved.id ? saved : row)));
+        this.session.toast('success', `Mesero asignado a la mesa ${saved.tableNumber}.`);
+      },
       error: (error: unknown) => this.session.toast('error', errorMessage(error)),
     });
   }
@@ -140,12 +154,37 @@ export class TablesPage {
   }
 
   openAccount(table: DiningTable): void {
+    if (table.status !== 'AVAILABLE') return;
     const branch = this.session.branchId();
     if (!branch) return;
     this.api.createOrder({ branchId: branch, orderType: 'DINE_IN', tableId: table.id, guestCount: table.capacity }).subscribe({
       next: (order) => void this.router.navigate(['/pos', order.id]),
       error: (error: unknown) => this.session.toast('error', errorMessage(error)),
     });
+  }
+
+  continueAccount(table: DiningTable): void {
+    this.api.openTableOrders(table.id).subscribe({
+      next: (rows) => {
+        if (rows.length === 1) {
+          void this.router.navigate(['/pos', rows[0].id]);
+          return;
+        }
+        if (!rows.length) {
+          this.session.toast('error', `La mesa ${table.tableNumber} está ocupada, pero no tiene una cuenta abierta.`);
+          return;
+        }
+        this.accountTable.set(table);
+        this.accounts.set(rows);
+      },
+      error: (error: unknown) => this.session.toast('error', errorMessage(error)),
+    });
+  }
+
+  openListedAccount(id: number): void {
+    this.accounts.set([]);
+    this.accountTable.set(null);
+    void this.router.navigate(['/pos', id]);
   }
 
   openHistory(table: DiningTable): void {

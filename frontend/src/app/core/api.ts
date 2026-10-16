@@ -81,6 +81,10 @@ export class Api {
     return this.http.get<Staff[]>(`${this.base}/staff`);
   }
 
+  waiters(): Observable<Staff[]> {
+    return this.http.get<Staff[]>(`${this.base}/staff/waiters`);
+  }
+
   branches(): Observable<Branch[]> {
     return this.http.get<Branch[]>(`${this.base}/branches`);
   }
@@ -185,6 +189,10 @@ export class Api {
 
   tableHistory(id: number): Observable<{ status: string; openedAt: string; closedAt: string | null; orderId: number | null }[]> {
     return this.http.get(`${this.base}/tables/${id}/history`) as Observable<{ status: string; openedAt: string; closedAt: string | null; orderId: number | null }[]>;
+  }
+
+  openTableOrders(id: number): Observable<OrderSummary[]> {
+    return this.http.get<OrderSummary[]>(`${this.base}/tables/${id}/open-orders`);
   }
 
   categories(): Observable<{ id: number; name: string; active: boolean; sortOrder: number }[]> {

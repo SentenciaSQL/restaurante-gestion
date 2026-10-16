@@ -84,19 +84,19 @@
       <article class="card bg-base-100 shadow-sm"><div class="card-body gap-2">
         <h2 class="card-title text-base">Parámetros</h2>
         @for (row of parameters(); track row.settingKey) {
-          <form class="flex gap-2" (submit)="$event.preventDefault(); saveParameter(row.settingKey, $any($event.target).value.value)">
-            <label class="form-control flex-1"><span class="label-text">{{ row.settingKey }}</span><input class="input input-bordered input-sm" name="value" [value]="row.settingValue" /></label>
-            @if (session.can('settings.operations')) { <button class="btn btn-sm mt-6" type="submit">Guardar</button> }
+          <form class="flex flex-col gap-2 sm:flex-row sm:items-end" (submit)="$event.preventDefault(); saveParameter(row.settingKey, $any($event.target).value.value)">
+            <label class="form-control min-w-0 flex-1"><span class="label-text">{{ row.settingKey }}</span><input class="input input-bordered input-sm" name="value" [value]="row.settingValue" /></label>
+            @if (session.can('settings.operations')) { <button class="btn btn-sm" type="submit">Guardar</button> }
           </form>
         }
         @if (session.can('settings.manage')) {
           <h3 class="mt-2 font-semibold">Numeración</h3>
           @for (row of sequences(); track row.id) {
-            <form class="flex gap-2" (submit)="$event.preventDefault(); saveSequence(row, $any($event.target).prefix.value, $any($event.target).padding.value)">
-              <span class="mt-2 w-24 text-sm">{{ row.docType }}</span>
-              <input class="input input-bordered input-sm" name="prefix" [value]="row.prefix" aria-label="Prefijo" />
-              <input class="input input-bordered input-sm w-20" name="padding" type="number" [value]="row.padding" aria-label="Dígitos" />
-              <button class="btn btn-sm" type="submit">Guardar</button>
+            <form class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" (submit)="$event.preventDefault(); saveSequence(row, $any($event.target).prefix.value, $any($event.target).padding.value)">
+              <span class="w-full text-sm sm:w-24">{{ row.docType }}</span>
+              <input class="input input-bordered input-sm min-w-0 sm:w-40" name="prefix" [value]="row.prefix" aria-label="Prefijo" />
+              <input class="input input-bordered input-sm w-full sm:w-20" name="padding" type="number" [value]="row.padding" aria-label="Dígitos" />
+              <button class="btn btn-sm w-fit" type="submit">Guardar</button>
             </form>
           }
         }

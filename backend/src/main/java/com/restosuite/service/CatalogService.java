@@ -1,6 +1,7 @@
 package com.restosuite.service;
 
 import com.restosuite.common.ApiException;
+import com.restosuite.common.Codes;
 import com.restosuite.common.Money;
 import com.restosuite.domain.AppSetting;
 import com.restosuite.domain.Branch;
@@ -18,7 +19,9 @@ import com.restosuite.domain.ProductVariant;
 import com.restosuite.domain.Recipe;
 import com.restosuite.domain.RecipeLine;
 import com.restosuite.domain.Restaurant;
+import com.restosuite.domain.SalesOrder;
 import com.restosuite.domain.TableOccupancy;
+import com.restosuite.domain.UserAccount;
 import com.restosuite.domain.TableReservation;
 import com.restosuite.domain.TaxRate;
 import com.restosuite.domain.UnitOfMeasure;
@@ -39,7 +42,9 @@ import com.restosuite.repo.ProductVariantRepository;
 import com.restosuite.repo.RecipeLineRepository;
 import com.restosuite.repo.RecipeRepository;
 import com.restosuite.repo.RestaurantRepository;
+import com.restosuite.repo.SalesOrderRepository;
 import com.restosuite.repo.TableOccupancyRepository;
+import com.restosuite.repo.UserAccountRepository;
 import com.restosuite.repo.TableReservationRepository;
 import com.restosuite.repo.TaxRateRepository;
 import com.restosuite.repo.UnitOfMeasureRepository;
@@ -65,6 +70,8 @@ public class CatalogService {
     private final KitchenStationRepository stations;
     private final DiningAreaRepository areas;
     private final DiningTableRepository tables;
+    private final SalesOrderRepository orders;
+    private final UserAccountRepository users;
     private final TableReservationRepository reservations;
     private final TableOccupancyRepository occupancy;
     private final MenuCategoryRepository categories;
@@ -82,6 +89,7 @@ public class CatalogService {
     public CatalogService(Support support, AuditService audit, RestaurantRepository restaurants, BranchRepository branches,
                           TaxRateRepository taxes, PaymentMethodRepository paymentMethods, UnitOfMeasureRepository units,
                           KitchenStationRepository stations, DiningAreaRepository areas, DiningTableRepository tables,
+                          SalesOrderRepository orders, UserAccountRepository users,
                           TableReservationRepository reservations, TableOccupancyRepository occupancy,
                           MenuCategoryRepository categories, ProductRepository products, ProductVariantRepository variants,
                           ModifierRepository modifiers, RecipeRepository recipes, RecipeLineRepository recipeLines,
@@ -97,6 +105,8 @@ public class CatalogService {
         this.stations = stations;
         this.areas = areas;
         this.tables = tables;
+        this.orders = orders;
+        this.users = users;
         this.reservations = reservations;
         this.occupancy = occupancy;
         this.categories = categories;
@@ -299,10 +309,34 @@ public class CatalogService {
 
     @Transactional
     public DiningTable assignWaiter(Long tableId, Long waiterId) {
+        if (waiterId == null) {
+            throw ApiException.badRequest("Seleccione un mesero.");
+        }
         DiningTable table = tables.findById(tableId).orElseThrow(() -> ApiException.notFound("La mesa"));
         DiningArea area = areas.findById(table.getAreaId()).orElseThrow();
         support.access().checkBranch(area.getBranchId());
-        table.setAssignedWaiterId(waiterId);
+        UserAccount waiter = users.findById(waiterId).orElseThrow(() -> ApiException.notFound("El mesero"));
+        if (!waiter.isActive() || !support.user().getRestaurantId().equals(waiter.getRestaurantId())) {
+            throw ApiException.badRequest("El mesero no está activo en este restaurante.");
+        }
+        if (!users.roleCodes(waiter.getId()).contains(Codes.ROLE_WAITER)) {
+            throw ApiException.badRequest("Solo puede asignar un usuario con el rol de mesero.");
+        }
+        table.setAssignedWaiterId(waiter.getId());
+        tables.saveAndFlush(table);
+        List<SalesOrder> open = orders.findByTableIdAndAccountStatus(table.getId(), Codes.OPEN);
+        for (SalesOrder order : open) {
+            order.setWaiterId(waiter.getId());
+        }
+        if (!open.isEmpty()) {
+            orders.saveAll(open);
+        }
+        for (TableOccupancy row : occupancy.findByTableIdOrderByOpenedAtDesc(table.getId())) {
+            if (row.getClosedAt() == null) {
+                row.setWaiterId(waiter.getId());
+            }
+        }
+        audit.record("TABLE_ASSIGN_WAITER", "TABLE", table.getId(), waiter.getFullName());
         return table;
     }
 

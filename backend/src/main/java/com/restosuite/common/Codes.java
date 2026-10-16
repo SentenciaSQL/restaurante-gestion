@@ -75,4 +75,5 @@ public final class Codes {
     public static final String DOC_PURCHASE = "PURCHASE";
 
     public static final String ROLE_ADMIN = "ADMIN";
+    public static final String ROLE_WAITER = "WAITER";
 }
