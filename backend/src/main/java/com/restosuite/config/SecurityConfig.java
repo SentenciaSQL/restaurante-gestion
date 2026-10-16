@@ -1,6 +1,7 @@
 package com.restosuite.config;
 
 import com.restosuite.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Arrays;
@@ -25,7 +27,9 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwt, AppProperties properties) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .securityContext(context -> context.securityContextRepository(new RequestAttributeSecurityContextRepository()))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/api/health", "/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/media/**").permitAll()
@@ -33,11 +37,17 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, ex) -> {
+                            if (response.isCommitted()) {
+                                return;
+                            }
                             response.setStatus(401);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"code\":\"AUTH\",\"message\":\"Inicie sesión para continuar.\"}");
                         })
                         .accessDeniedHandler((request, response, ex) -> {
+                            if (response.isCommitted()) {
+                                return;
+                            }
                             response.setStatus(403);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"No tiene permiso para realizar esta operación.\"}");
